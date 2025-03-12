@@ -1,53 +1,50 @@
+import React from 'react';
 import classNames from 'classnames';
 import { TypeFilter } from '../types/TypeFilter';
 
 type Props = {
   filterBy: TypeFilter;
   setFilterBy: React.Dispatch<React.SetStateAction<TypeFilter>>;
-  notCompletedTasksCounter: number;
-  isCompletedExists: boolean;
-  clearCompletedTasks: () => void;
+  activeCount: number;
+  hasCompleted: boolean;
+  clearCompletedTodos: () => Promise<void>;
 };
 
 export const TodoFooter: React.FC<Props> = ({
   filterBy,
   setFilterBy,
-  notCompletedTasksCounter,
-  isCompletedExists,
-  clearCompletedTasks,
+  activeCount,
+  hasCompleted,
+  clearCompletedTodos,
 }) => {
   return (
     <footer className="todoapp__footer" data-cy="Footer">
       <span className="todo-count" data-cy="TodosCounter">
-        {notCompletedTasksCounter} items left
+        {activeCount} {activeCount === 1 ? 'item' : 'items'} left
       </span>
 
-      {/* Active link should have the 'selected' class */}
       <nav className="filter" data-cy="Filter">
-        {Object.values(TypeFilter).map(todoType => (
+        {Object.values(TypeFilter).map(filterType => (
           <a
-            href={`#/${todoType}`}
-            key={todoType}
+            href={`#/${filterType}`}
+            key={filterType}
             className={classNames('filter__link', {
-              selected: todoType === filterBy,
+              selected: filterType === filterBy,
             })}
-            data-cy={`FilterLink${todoType}`}
-            onClick={() => {
-              setFilterBy(todoType);
-            }}
+            data-cy={`FilterLink${filterType}`}
+            onClick={() => setFilterBy(filterType)}
           >
-            {todoType}
+            {filterType}
           </a>
         ))}
       </nav>
 
-      {/* this button should be disabled if there are no completed todos */}
       <button
         type="button"
         className="todoapp__clear-completed"
         data-cy="ClearCompletedButton"
-        disabled={!isCompletedExists}
-        onClick={clearCompletedTasks}
+        disabled={!hasCompleted}
+        onClick={clearCompletedTodos}
       >
         Clear completed
       </button>

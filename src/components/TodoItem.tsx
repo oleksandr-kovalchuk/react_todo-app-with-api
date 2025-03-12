@@ -1,69 +1,70 @@
+import React, { useEffect, useRef, useState } from 'react';
 import classNames from 'classnames';
 import { Todo } from '../types/Todo';
-import { useEffect, useRef, useState } from 'react';
 
 type Props = {
   todo: Todo;
-  handleDeleteTodo: (todoIds: number[]) => void;
+  deleteTodos: (todoIds: number[]) => Promise<void>;
   isLoading: boolean;
   loadingIds: number[];
-  handleSwitchTodo: (todos: Todo[]) => void;
-  updateTitleName: (todosDataUpdate: Todo[]) => Promise<boolean>[];
+  toggleTodos: (todos: Todo[]) => Promise<boolean[]>;
+  updateTodos: (todosToUpdate: Todo[]) => Promise<boolean[]>;
+  focusInput: () => void;
 };
 
 export const TodoItem: React.FC<Props> = ({
   todo,
-  handleDeleteTodo,
+  deleteTodos,
   isLoading,
   loadingIds,
-  handleSwitchTodo,
-  updateTitleName,
+  toggleTodos,
+  updateTodos,
+  focusInput,
 }) => {
   const { id, title, completed } = todo;
   const [editValue, setEditValue] = useState<string>(title);
-  const [hasEditTitleFocus, setHasEditTitleFocus] = useState(false);
-
+  const [isEditing, setIsEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, [hasEditTitleFocus]);
+    if (isEditing) {
+      inputRef.current?.focus();
+    }
+  }, [isEditing]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const trimmedTitle = editValue.trim();
 
     if (!trimmedTitle) {
-      handleDeleteTodo([id]);
+      await deleteTodos([id]);
+      focusInput();
 
       return;
     }
 
     if (title === trimmedTitle) {
       setEditValue(trimmedTitle);
-      setHasEditTitleFocus(false);
+      setIsEditing(false);
+      focusInput();
 
       return;
     }
 
-    setHasEditTitleFocus(false);
+    setIsEditing(false);
     setEditValue(trimmedTitle);
 
     const updatedTodo = {
-      id: todo.id,
-      userId: todo.userId,
+      ...todo,
       title: trimmedTitle,
-      completed: todo.completed,
     };
 
-    updateTitleName([updatedTodo]).forEach(promise => {
-      promise.then(response => {
-        if (!response) {
-          setHasEditTitleFocus(true);
-        }
-      });
-    });
+    const [success] = await updateTodos([updatedTodo]);
 
-    setHasEditTitleFocus(false);
+    if (!success) {
+      setIsEditing(true);
+    } else {
+      focusInput();
+    }
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -71,17 +72,18 @@ export const TodoItem: React.FC<Props> = ({
       event.preventDefault();
       handleSave();
     } else if (event.key === 'Escape') {
-      setHasEditTitleFocus(false);
+      setIsEditing(false);
       setEditValue(title);
+      focusInput();
     }
   };
+
+  const isProcessing = isLoading || loadingIds.includes(id);
 
   return (
     <div
       data-cy="Todo"
-      className={classNames('todo', 'item-enter-done', {
-        completed: completed,
-      })}
+      className={classNames('todo', 'item-enter-done', { completed })}
     >
       {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
       <label className="todo__status-label">
@@ -90,22 +92,18 @@ export const TodoItem: React.FC<Props> = ({
           type="checkbox"
           className="todo__status"
           checked={completed}
-          onChange={() => {
-            handleSwitchTodo([todo]);
-          }}
+          onChange={() => toggleTodos([todo])}
         />
       </label>
 
-      {hasEditTitleFocus ? (
+      {isEditing ? (
         <input
           data-cy="TodoTitleField"
           type="text"
           className="todo__title-field"
           placeholder="Empty todo will be deleted"
           value={editValue}
-          onChange={event => {
-            setEditValue(event.target.value);
-          }}
+          onChange={event => setEditValue(event.target.value)}
           onKeyUp={handleKeyDown}
           onBlur={handleSave}
           ref={inputRef}
@@ -115,19 +113,15 @@ export const TodoItem: React.FC<Props> = ({
           <span
             data-cy="TodoTitle"
             className="todo__title"
-            onDoubleClick={() => {
-              setHasEditTitleFocus(true);
-            }}
+            onDoubleClick={() => setIsEditing(true)}
           >
-            {editValue}
+            {title}
           </span>
           <button
             type="button"
             className="todo__remove"
             data-cy="TodoDelete"
-            onClick={() => {
-              handleDeleteTodo([id]);
-            }}
+            onClick={() => deleteTodos([id])}
           >
             ×
           </button>
@@ -137,7 +131,7 @@ export const TodoItem: React.FC<Props> = ({
       <div
         data-cy="TodoLoader"
         className={classNames('modal', 'overlay', {
-          'is-active': isLoading || loadingIds.includes(id),
+          'is-active': isProcessing,
         })}
       >
         <div className="modal-background has-background-white-ter" />

@@ -1,5 +1,5 @@
+import React, { useEffect } from 'react';
 import classNames from 'classnames';
-import { useEffect } from 'react';
 
 type Props = {
   errorMessage: string;
@@ -24,10 +24,6 @@ export const ErrorNotifications: React.FC<Props> = ({
     };
   }, [errorMessage, setErrorMessage]);
 
-  const onHideErrorButtonClick = () => {
-    setErrorMessage('');
-  };
-
   return (
     <div
       data-cy="ErrorNotification"
@@ -43,7 +39,7 @@ export const ErrorNotifications: React.FC<Props> = ({
         data-cy="HideErrorButton"
         type="button"
         className="delete"
-        onClick={onHideErrorButtonClick}
+        onClick={() => setErrorMessage('')}
       />
       {errorMessage}
     </div>

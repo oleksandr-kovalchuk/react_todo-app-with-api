@@ -1,3 +1,4 @@
+import React from 'react';
 import classNames from 'classnames';
 import { Todo } from '../types/Todo';
 
@@ -7,7 +8,7 @@ type Props = {
   setNewTodoInput: React.Dispatch<React.SetStateAction<string>>;
   addTodo: (event: React.FormEvent<HTMLFormElement>) => void;
   isLoading: boolean;
-  handleSwitchTodos: (handleType: string) => void;
+  toggleAllTodos: (makeCompleted: boolean) => Promise<boolean[]>;
   newInputRef: React.RefObject<HTMLInputElement>;
 };
 
@@ -17,18 +18,14 @@ export const TodoHeader: React.FC<Props> = ({
   setNewTodoInput,
   addTodo,
   isLoading,
-  handleSwitchTodos,
+  toggleAllTodos,
   newInputRef,
 }) => {
-  const completedTodos = todos.filter(todo => todo.completed);
-  const activeTodos = todos.filter(todo => !todo.completed);
+  const isAllCompleted =
+    todos.length > 0 && todos.every(todo => todo.completed);
 
-  const handleClick = () => {
-    if (activeTodos.length === 0) {
-      handleSwitchTodos('makeAllActive');
-    } else {
-      handleSwitchTodos('makeAllCompleted');
-    }
+  const handleToggleAll = () => {
+    toggleAllTodos(!isAllCompleted);
   };
 
   return (
@@ -37,18 +34,14 @@ export const TodoHeader: React.FC<Props> = ({
         <button
           type="button"
           className={classNames('todoapp__toggle-all', {
-            active: completedTodos.length === todos.length,
+            active: isAllCompleted,
           })}
           data-cy="ToggleAllButton"
-          onClick={() => handleClick()}
+          onClick={handleToggleAll}
         />
       )}
 
-      <form
-        onSubmit={event => {
-          addTodo(event);
-        }}
-      >
+      <form onSubmit={addTodo}>
         <input
           data-cy="NewTodoField"
           type="text"
