@@ -7,7 +7,7 @@ type Props = {
   setFilterBy: React.Dispatch<React.SetStateAction<TypeFilter>>;
   activeCount: number;
   hasCompleted: boolean;
-  clearCompletedTodos: () => Promise<void>;
+  clearCompletedTodos: () => void;
 };
 
 export const TodoFooter: React.FC<Props> = ({

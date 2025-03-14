@@ -22,8 +22,10 @@ export const TodoItem: React.FC<Props> = ({
   focusInput,
 }) => {
   const { id, title, completed } = todo;
+
   const [editValue, setEditValue] = useState<string>(title);
   const [isEditing, setIsEditing] = useState(false);
+
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -53,11 +55,7 @@ export const TodoItem: React.FC<Props> = ({
     setIsEditing(false);
     setEditValue(trimmedTitle);
 
-    const updatedTodo = {
-      ...todo,
-      title: trimmedTitle,
-    };
-
+    const updatedTodo = { ...todo, title: trimmedTitle };
     const [success] = await updateTodos([updatedTodo]);
 
     if (!success) {
@@ -71,7 +69,9 @@ export const TodoItem: React.FC<Props> = ({
     if (event.key === 'Enter') {
       event.preventDefault();
       handleSave();
-    } else if (event.key === 'Escape') {
+    }
+
+    if (event.key === 'Escape') {
       setIsEditing(false);
       setEditValue(title);
       focusInput();
@@ -85,7 +85,6 @@ export const TodoItem: React.FC<Props> = ({
       data-cy="Todo"
       className={classNames('todo', 'item-enter-done', { completed })}
     >
-      {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
       <label className="todo__status-label">
         <input
           data-cy="TodoStatus"
@@ -93,6 +92,7 @@ export const TodoItem: React.FC<Props> = ({
           className="todo__status"
           checked={completed}
           onChange={() => toggleTodos([todo])}
+          aria-label="Toggle todo status"
         />
       </label>
 
@@ -117,6 +117,7 @@ export const TodoItem: React.FC<Props> = ({
           >
             {title}
           </span>
+
           <button
             type="button"
             className="todo__remove"
