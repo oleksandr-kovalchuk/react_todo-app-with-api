@@ -18,7 +18,7 @@ export const App: React.FC = () => {
   const [tempTodo, setTempTodo] = useState<Todo | null>(null);
   const [todoInputValue, setTodoInputValue] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [isLoading, setIsAddingTodo] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [processingTodoIds, setProcessingTodoIds] = useState<number[]>([]);
   const [activeFilter, setActiveFilter] = useState<TypeFilter>(TypeFilter.All);
 
@@ -91,7 +91,7 @@ export const App: React.FC = () => {
         return;
       }
 
-      setIsAddingTodo(true);
+      setIsLoading(true);
 
       const newTodoData = {
         userId: api.USER_ID,
@@ -110,7 +110,7 @@ export const App: React.FC = () => {
         showTemporaryError('Unable to add a todo');
       } finally {
         setTempTodo(null);
-        setIsAddingTodo(false);
+        setIsLoading(false);
       }
     },
     [todoInputValue, showTemporaryError],
