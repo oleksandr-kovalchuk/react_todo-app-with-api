@@ -2,30 +2,34 @@ import React from 'react';
 import classNames from 'classnames';
 import { Todo } from '../types/Todo';
 
-type Props = {
+type TodoHeaderProps = {
   todos: Todo[];
-  newTodoInput: string;
-  setNewTodoInput: React.Dispatch<React.SetStateAction<string>>;
+  todoInputValue: string;
+  setTodoInputValue: React.Dispatch<React.SetStateAction<string>>;
   addTodo: (event: React.FormEvent<HTMLFormElement>) => void;
   isLoading: boolean;
   toggleAllTodos: (makeCompleted: boolean) => Promise<boolean[]>;
-  newInputRef: React.RefObject<HTMLInputElement>;
+  inputRef: React.RefObject<HTMLInputElement>;
 };
 
-export const TodoHeader: React.FC<Props> = ({
+export const TodoHeader: React.FC<TodoHeaderProps> = ({
   todos,
-  newTodoInput,
-  setNewTodoInput,
+  todoInputValue,
+  setTodoInputValue,
   addTodo,
   isLoading,
   toggleAllTodos,
-  newInputRef,
+  inputRef,
 }) => {
-  const isAllCompleted =
+  const areAllTodosCompleted =
     todos.length > 0 && todos.every(todo => todo.completed);
 
   const handleToggleAll = () => {
-    toggleAllTodos(!isAllCompleted);
+    toggleAllTodos(!areAllTodosCompleted);
+  };
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setTodoInputValue(event.target.value);
   };
 
   return (
@@ -34,10 +38,11 @@ export const TodoHeader: React.FC<Props> = ({
         <button
           type="button"
           className={classNames('todoapp__toggle-all', {
-            active: isAllCompleted,
+            active: areAllTodosCompleted,
           })}
           data-cy="ToggleAllButton"
           onClick={handleToggleAll}
+          aria-label="Toggle all todos"
         />
       )}
 
@@ -47,9 +52,9 @@ export const TodoHeader: React.FC<Props> = ({
           type="text"
           className="todoapp__new-todo"
           placeholder="What needs to be done?"
-          value={newTodoInput}
-          onChange={event => setNewTodoInput(event.target.value)}
-          ref={newInputRef}
+          value={todoInputValue}
+          onChange={handleInputChange}
+          ref={inputRef}
           disabled={isLoading}
         />
       </form>

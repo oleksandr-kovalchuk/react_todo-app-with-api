@@ -3,23 +3,23 @@ import { Todo } from '../types/Todo';
 import { TodoItem } from './TodoItem';
 import { CSSTransition, TransitionGroup } from 'react-transition-group';
 
-type Props = {
+type TodoListProps = {
   todos: Todo[];
   tempTodo: Todo | null;
   deleteTodos: (todoIds: number[]) => Promise<void>;
   isLoading: boolean;
-  loadingIds: number[];
+  processingTodoIds: number[];
   toggleTodos: (todos: Todo[]) => Promise<boolean[]>;
   updateTodos: (todosToUpdate: Todo[]) => Promise<boolean[]>;
   focusInput: () => void;
 };
 
-export const TodoList: React.FC<Props> = ({
+export const TodoList: React.FC<TodoListProps> = ({
   todos,
   tempTodo,
   deleteTodos,
   isLoading,
-  loadingIds,
+  processingTodoIds,
   toggleTodos,
   updateTodos,
   focusInput,
@@ -33,7 +33,7 @@ export const TodoList: React.FC<Props> = ({
               todo={todo}
               deleteTodos={deleteTodos}
               isLoading={false}
-              loadingIds={loadingIds}
+              processingTodoIds={processingTodoIds}
               toggleTodos={toggleTodos}
               updateTodos={updateTodos}
               focusInput={focusInput}
@@ -47,7 +47,7 @@ export const TodoList: React.FC<Props> = ({
               todo={tempTodo}
               deleteTodos={deleteTodos}
               isLoading={isLoading}
-              loadingIds={loadingIds}
+              processingTodoIds={processingTodoIds}
               toggleTodos={toggleTodos}
               updateTodos={updateTodos}
               focusInput={focusInput}

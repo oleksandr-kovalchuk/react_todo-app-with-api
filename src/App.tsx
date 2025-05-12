@@ -16,13 +16,13 @@ import { ErrorNotifications } from './components/ErrorNotifications';
 export const App: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [tempTodo, setTempTodo] = useState<Todo | null>(null);
-  const [newTodoInput, setNewTodoInput] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingIds, setLoadingIds] = useState<number[]>([]);
-  const [filter, setFilter] = useState<TypeFilter>(TypeFilter.All);
+  const [todoInputValue, setTodoInputValue] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsAddingTodo] = useState(false);
+  const [processingTodoIds, setProcessingTodoIds] = useState<number[]>([]);
+  const [activeFilter, setActiveFilter] = useState<TypeFilter>(TypeFilter.All);
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  const todoInputRef = useRef<HTMLInputElement>(null);
 
   const activeTodos = useMemo(
     () => todos.filter(todo => !todo.completed),
@@ -34,15 +34,8 @@ export const App: React.FC = () => {
     [todos],
   );
 
-  const activeCount = activeTodos.length;
-
-  const showError = useCallback((message: string) => {
-    setError(message);
-    setTimeout(() => setError(''), 3000);
-  }, []);
-
   const filteredTodos = useMemo(() => {
-    switch (filter) {
+    switch (activeFilter) {
       case TypeFilter.Active:
         return activeTodos;
 
@@ -52,156 +45,185 @@ export const App: React.FC = () => {
       default:
         return todos;
     }
-  }, [filter, activeTodos, completedTodos, todos]);
+  }, [activeFilter, activeTodos, completedTodos, todos]);
+
+  const showTemporaryError = useCallback(
+    (message: string, durationMs = 3000) => {
+      setErrorMessage(message);
+      setTimeout(() => setErrorMessage(''), durationMs);
+    },
+    [],
+  );
+
+  const focusInput = useCallback(() => {
+    todoInputRef.current?.focus();
+  }, []);
 
   useEffect(() => {
     if (!isLoading) {
-      inputRef.current?.focus();
+      focusInput();
     }
-  }, [isLoading]);
+  }, [isLoading, focusInput]);
 
   useEffect(() => {
-    const fetchTodos = async () => {
+    const loadTodos = async () => {
       try {
         const todosData = await api.getTodos();
 
         setTodos(todosData);
-      } catch (err) {
-        showError('Unable to load todos');
+      } catch (error) {
+        showTemporaryError('Unable to load todos');
       }
     };
 
-    fetchTodos();
-  }, [showError]);
+    loadTodos();
+  }, [showTemporaryError]);
 
-  // Add todo
   const addTodo = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
       e.preventDefault();
 
-      const title = newTodoInput.trim();
+      const title = todoInputValue.trim();
 
       if (!title) {
-        showError('Title should not be empty');
+        showTemporaryError('Title should not be empty');
 
         return;
       }
 
-      setIsLoading(true);
-      const userId = api.USER_ID;
-      const todoData = { userId, title, completed: false };
+      setIsAddingTodo(true);
 
-      setTempTodo({ id: 0, ...todoData });
+      const newTodoData = {
+        userId: api.USER_ID,
+        title,
+        completed: false,
+      };
+
+      setTempTodo({ id: 0, ...newTodoData });
 
       try {
-        const newTodo = await api.createTodo(todoData);
+        const createdTodo = await api.createTodo(newTodoData);
 
-        setTodos(prev => [...prev, newTodo]);
-        setNewTodoInput('');
-        setTimeout(() => inputRef.current?.focus(), 0);
-      } catch (err) {
-        showError('Unable to add a todo');
+        setTodos(currentTodos => [...currentTodos, createdTodo]);
+        setTodoInputValue('');
+      } catch (error) {
+        showTemporaryError('Unable to add a todo');
       } finally {
         setTempTodo(null);
-        setIsLoading(false);
+        setIsAddingTodo(false);
       }
     },
-    [newTodoInput, showError],
+    [todoInputValue, showTemporaryError],
   );
 
-  // Delete todos
   const deleteTodos = useCallback(
-    async (ids: number[]) => {
-      if (!ids.length) {
+    async (todoIds: number[]) => {
+      if (!todoIds.length) {
         return;
       }
 
-      setLoadingIds(ids);
-      await Promise.all(
-        ids.map(async id => {
-          try {
-            await api.deleteTodo(id);
-            setTodos(prev => prev.filter(todo => todo.id !== id));
-          } catch (err) {
-            showError('Unable to delete a todo');
-          }
-        }),
-      );
-      setLoadingIds([]);
-      inputRef.current?.focus();
+      setProcessingTodoIds(current => [...current, ...todoIds]);
+
+      try {
+        await Promise.all(
+          todoIds.map(async id => {
+            try {
+              await api.deleteTodo(id);
+
+              setTodos(currentTodos =>
+                currentTodos.filter(todo => todo.id !== id),
+              );
+            } catch (error) {
+              showTemporaryError('Unable to delete a todo');
+            }
+          }),
+        );
+      } finally {
+        setProcessingTodoIds(current =>
+          current.filter(id => !todoIds.includes(id)),
+        );
+
+        focusInput();
+      }
     },
-    [showError],
+    [showTemporaryError, focusInput],
   );
 
-  // Update todos
   const updateTodos = useCallback(
     async (todosToUpdate: Todo[]): Promise<boolean[]> => {
       if (!todosToUpdate.length) {
         return [];
       }
 
-      const ids = todosToUpdate.map(t => t.id);
+      const todoIds = todosToUpdate.map(todo => todo.id);
 
-      setLoadingIds(ids);
+      setProcessingTodoIds(current => [...current, ...todoIds]);
 
-      const results = await Promise.all(
-        todosToUpdate.map(async updatedTodo => {
-          try {
-            await api.updateTodo(updatedTodo);
-            setTodos(prev =>
-              prev.map(todo =>
-                todo.id === updatedTodo.id ? updatedTodo : todo,
-              ),
-            );
+      try {
+        const updateResults = await Promise.all(
+          todosToUpdate.map(async updatedTodo => {
+            try {
+              await api.updateTodo(updatedTodo);
 
-            return true;
-          } catch (err) {
-            showError('Unable to update a todo');
+              setTodos(currentTodos =>
+                currentTodos.map(todo =>
+                  todo.id === updatedTodo.id ? updatedTodo : todo,
+                ),
+              );
 
-            return false;
-          }
-        }),
-      );
+              return true;
+            } catch (error) {
+              showTemporaryError('Unable to update a todo');
 
-      setLoadingIds([]);
+              return false;
+            }
+          }),
+        );
 
-      return results;
+        return updateResults;
+      } finally {
+        setProcessingTodoIds(current =>
+          current.filter(id => !todoIds.includes(id)),
+        );
+      }
     },
-    [showError],
+    [showTemporaryError],
   );
 
-  // Toggle todos
   const toggleTodos = useCallback(
     async (todosToToggle: Todo[]) => {
-      const toggled = todosToToggle.map(todo => ({
+      const toggledTodos = todosToToggle.map(todo => ({
         ...todo,
         completed: !todo.completed,
       }));
 
-      return updateTodos(toggled);
+      return updateTodos(toggledTodos);
     },
     [updateTodos],
   );
 
-  // Toggle all todos
   const toggleAllTodos = useCallback(
-    async (complete: boolean) => {
-      const todosToToggle = complete ? activeTodos : completedTodos;
-      const updated = todosToToggle.map(todo => ({
+    async (shouldComplete: boolean) => {
+      const todosToToggle = shouldComplete ? activeTodos : completedTodos;
+
+      if (!todosToToggle.length) {
+        return [];
+      }
+
+      const todosWithUpdatedStatus = todosToToggle.map(todo => ({
         ...todo,
-        completed: complete,
+        completed: shouldComplete,
       }));
 
-      return updateTodos(updated);
+      return updateTodos(todosWithUpdatedStatus);
     },
     [activeTodos, completedTodos, updateTodos],
   );
 
-  // Clear all completed todos
-  const clearCompletedTodos = useCallback(async () => {
-    const completedIds = completedTodos.map(todo => todo.id);
+  const clearCompletedTodos = useCallback(() => {
+    const completedTodoIds = completedTodos.map(todo => todo.id);
 
-    await deleteTodos(completedIds);
+    return deleteTodos(completedTodoIds);
   }, [completedTodos, deleteTodos]);
 
   return (
@@ -211,12 +233,12 @@ export const App: React.FC = () => {
       <div className="todoapp__content">
         <TodoHeader
           todos={todos}
-          newTodoInput={newTodoInput}
-          setNewTodoInput={setNewTodoInput}
+          todoInputValue={todoInputValue}
+          setTodoInputValue={setTodoInputValue}
           addTodo={addTodo}
           isLoading={isLoading}
           toggleAllTodos={toggleAllTodos}
-          newInputRef={inputRef}
+          inputRef={todoInputRef}
         />
 
         <TodoList
@@ -224,24 +246,27 @@ export const App: React.FC = () => {
           deleteTodos={deleteTodos}
           tempTodo={tempTodo}
           isLoading={isLoading}
-          loadingIds={loadingIds}
+          processingTodoIds={processingTodoIds}
           toggleTodos={toggleTodos}
           updateTodos={updateTodos}
-          focusInput={() => inputRef.current?.focus()}
+          focusInput={focusInput}
         />
 
         {todos.length > 0 && (
           <TodoFooter
-            filterBy={filter}
-            setFilterBy={setFilter}
-            activeCount={activeCount}
+            currentFilter={activeFilter}
+            setCurrentFilter={setActiveFilter}
+            activeCount={activeTodos.length}
             hasCompleted={completedTodos.length > 0}
             clearCompletedTodos={clearCompletedTodos}
           />
         )}
       </div>
 
-      <ErrorNotifications errorMessage={error} setErrorMessage={setError} />
+      <ErrorNotifications
+        errorMessage={errorMessage}
+        setErrorMessage={setErrorMessage}
+      />
     </div>
   );
 };

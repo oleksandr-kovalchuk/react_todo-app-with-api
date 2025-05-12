@@ -2,27 +2,27 @@ import { Todo } from '../types/Todo';
 import { client } from '../utils/fetchClient';
 
 export const USER_ID = 2305;
+const BASE_TODOS_URL = '/todos';
 
 export const getTodos = () => {
-  return client.get<Todo[]>(`/todos?userId=${USER_ID}`);
+  const url = `${BASE_TODOS_URL}?userId=${USER_ID}`;
+
+  return client.get<Todo[]>(url);
 };
 
-export const createTodo = ({ userId, title, completed }: Omit<Todo, 'id'>) => {
-  return client.post<Todo>(`/todos`, {
-    userId,
-    title,
-    completed,
-  });
+export const createTodo = (todoData: Omit<Todo, 'id'>) => {
+  return client.post<Todo>(BASE_TODOS_URL, todoData);
 };
 
 export const deleteTodo = (todoId: number) => {
-  return client.delete(`/todos/${todoId}`);
+  const url = `${BASE_TODOS_URL}/${todoId}`;
+
+  return client.delete(url);
 };
 
 export const updateTodo = ({ id, title, completed }: Todo) => {
-  return client.patch<Todo>(`/todos/${id}`, {
-    id,
-    title,
-    completed,
-  });
+  const url = `${BASE_TODOS_URL}/${id}`;
+  const updateData = { title, completed };
+
+  return client.patch<Todo>(url, updateData);
 };

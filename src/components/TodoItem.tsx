@@ -2,40 +2,56 @@ import React, { useEffect, useRef, useState } from 'react';
 import classNames from 'classnames';
 import { Todo } from '../types/Todo';
 
-type Props = {
+type TodoItemProps = {
   todo: Todo;
   deleteTodos: (todoIds: number[]) => Promise<void>;
   isLoading: boolean;
-  loadingIds: number[];
+  processingTodoIds: number[];
   toggleTodos: (todos: Todo[]) => Promise<boolean[]>;
   updateTodos: (todosToUpdate: Todo[]) => Promise<boolean[]>;
   focusInput: () => void;
 };
 
-export const TodoItem: React.FC<Props> = ({
+export const TodoItem: React.FC<TodoItemProps> = ({
   todo,
   deleteTodos,
   isLoading,
-  loadingIds,
+  processingTodoIds,
   toggleTodos,
   updateTodos,
   focusInput,
 }) => {
   const { id, title, completed } = todo;
 
-  const [editValue, setEditValue] = useState<string>(title);
+  const [editedTitle, setEditedTitle] = useState<string>(title);
   const [isEditing, setIsEditing] = useState(false);
 
-  const inputRef = useRef<HTMLInputElement>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isEditing) {
-      inputRef.current?.focus();
+      editInputRef.current?.focus();
     }
   }, [isEditing]);
 
-  const handleSave = async () => {
-    const trimmedTitle = editValue.trim();
+  const handleDelete = () => {
+    deleteTodos([id]);
+  };
+
+  const handleToggle = () => {
+    toggleTodos([todo]);
+  };
+
+  const handleStartEditing = () => {
+    setIsEditing(true);
+  };
+
+  const handleEditChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setEditedTitle(event.target.value);
+  };
+
+  const handleSaveEdit = async () => {
+    const trimmedTitle = editedTitle.trim();
 
     if (!trimmedTitle) {
       await deleteTodos([id]);
@@ -45,7 +61,7 @@ export const TodoItem: React.FC<Props> = ({
     }
 
     if (title === trimmedTitle) {
-      setEditValue(trimmedTitle);
+      setEditedTitle(trimmedTitle);
       setIsEditing(false);
       focusInput();
 
@@ -53,7 +69,7 @@ export const TodoItem: React.FC<Props> = ({
     }
 
     setIsEditing(false);
-    setEditValue(trimmedTitle);
+    setEditedTitle(trimmedTitle);
 
     const updatedTodo = { ...todo, title: trimmedTitle };
     const [success] = await updateTodos([updatedTodo]);
@@ -68,17 +84,17 @@ export const TodoItem: React.FC<Props> = ({
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
       event.preventDefault();
-      handleSave();
+      handleSaveEdit();
     }
 
     if (event.key === 'Escape') {
       setIsEditing(false);
-      setEditValue(title);
+      setEditedTitle(title);
       focusInput();
     }
   };
 
-  const isProcessing = isLoading || loadingIds.includes(id);
+  const isProcessing = isLoading || processingTodoIds.includes(id);
 
   return (
     <div
@@ -91,7 +107,7 @@ export const TodoItem: React.FC<Props> = ({
           type="checkbox"
           className="todo__status"
           checked={completed}
-          onChange={() => toggleTodos([todo])}
+          onChange={handleToggle}
           aria-label="Toggle todo status"
         />
       </label>
@@ -102,18 +118,18 @@ export const TodoItem: React.FC<Props> = ({
           type="text"
           className="todo__title-field"
           placeholder="Empty todo will be deleted"
-          value={editValue}
-          onChange={event => setEditValue(event.target.value)}
+          value={editedTitle}
+          onChange={handleEditChange}
           onKeyUp={handleKeyDown}
-          onBlur={handleSave}
-          ref={inputRef}
+          onBlur={handleSaveEdit}
+          ref={editInputRef}
         />
       ) : (
         <>
           <span
             data-cy="TodoTitle"
             className="todo__title"
-            onDoubleClick={() => setIsEditing(true)}
+            onDoubleClick={handleStartEditing}
           >
             {title}
           </span>
@@ -122,7 +138,8 @@ export const TodoItem: React.FC<Props> = ({
             type="button"
             className="todo__remove"
             data-cy="TodoDelete"
-            onClick={() => deleteTodos([id])}
+            onClick={handleDelete}
+            aria-label="Delete todo"
           >
             ×
           </button>

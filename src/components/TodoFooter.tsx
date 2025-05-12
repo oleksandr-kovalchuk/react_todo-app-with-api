@@ -2,25 +2,27 @@ import React from 'react';
 import classNames from 'classnames';
 import { TypeFilter } from '../types/TypeFilter';
 
-type Props = {
-  filterBy: TypeFilter;
-  setFilterBy: React.Dispatch<React.SetStateAction<TypeFilter>>;
+type TodoFooterProps = {
+  currentFilter: TypeFilter;
+  setCurrentFilter: React.Dispatch<React.SetStateAction<TypeFilter>>;
   activeCount: number;
   hasCompleted: boolean;
   clearCompletedTodos: () => void;
 };
 
-export const TodoFooter: React.FC<Props> = ({
-  filterBy,
-  setFilterBy,
+export const TodoFooter: React.FC<TodoFooterProps> = ({
+  currentFilter,
+  setCurrentFilter,
   activeCount,
   hasCompleted,
   clearCompletedTodos,
 }) => {
+  const itemText = activeCount === 1 ? 'item' : 'items';
+
   return (
     <footer className="todoapp__footer" data-cy="Footer">
       <span className="todo-count" data-cy="TodosCounter">
-        {activeCount} {activeCount === 1 ? 'item' : 'items'} left
+        {activeCount} {itemText} left
       </span>
 
       <nav className="filter" data-cy="Filter">
@@ -29,10 +31,10 @@ export const TodoFooter: React.FC<Props> = ({
             href={`#/${filterType}`}
             key={filterType}
             className={classNames('filter__link', {
-              selected: filterType === filterBy,
+              selected: filterType === currentFilter,
             })}
             data-cy={`FilterLink${filterType}`}
-            onClick={() => setFilterBy(filterType)}
+            onClick={() => setCurrentFilter(filterType)}
           >
             {filterType}
           </a>
